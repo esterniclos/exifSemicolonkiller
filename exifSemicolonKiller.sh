@@ -4,6 +4,19 @@
 originalK=""
 newK=""
 
+function containsSemicolons (){
+	local s1=$1
+	
+	case "$s1" in 
+		*;*)
+			return 0
+			;;
+		*)
+			return 1
+			;;
+	esac
+} 
+
 function semicolonsToComma (){
 	local originalK=$1
 	
@@ -64,14 +77,18 @@ function allphotos (){
 	flist=`find $dirname -type f -name "*.jpg"`
 	for filename in $flist;
 	do
-		echo "photo begin $filename"	
-		getKeywords $filename
-		# Tags may have spaces. needs " around argument.
-		semicolonsToComma "$originalK"
-		rewriteKeywords $filename "$originalK" "$newK"
-		echo "photo end $filename" 
-		echo "                       -*- "
-		echo ""
+		if test -f "$filename"; then
+			echo "photo begin $filename"	
+			getKeywords "$filename"
+			# Tags may have spaces. needs " around argument.
+			if containsSemicolons "$originalK"; then
+				semicolonsToComma "$originalK"
+				# rewriteKeywords "$filename" "$originalK" "$newK"
+			fi
+			echo "photo end $filename" 
+			echo "                       -*- "
+			echo ""
+		fi
 	done
 	
 	echo "end $dirname"
