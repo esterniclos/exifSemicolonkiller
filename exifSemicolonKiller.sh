@@ -7,14 +7,13 @@ newK=""
 function containsSemicolons (){
 	local s1=$1
 	
-	case "$s1" in 
-		*;*)
-			return 0
-			;;
-		*)
-			return 1
-			;;
-	esac
+	if [[ $s1 == *\;* ]]; then	
+		return 0
+	else
+		echo " Etiquetas correctas. Nada de cambiar"
+		return 1
+	fi
+
 } 
 
 function semicolonsToComma (){
@@ -83,7 +82,7 @@ function allphotos (){
 			# Tags may have spaces. needs " around argument.
 			if containsSemicolons "$originalK"; then
 				semicolonsToComma "$originalK"
-				# rewriteKeywords "$filename" "$originalK" "$newK"
+				rewriteKeywords "$filename" "$originalK" "$newK"
 			fi
 			echo "photo end $filename" 
 			echo "                       -*- "
