@@ -1,96 +1,108 @@
 #!/bin/bash
 
-# Variables globales
-originalK=""
-newK=""
 
-function containsSemicolons (){
-	local s1=$1
-	
-	if [[ $s1 == *\;* ]]; then	
-		return 0
-	else
-		echo " Etiquetas correctas. Nada de cambiar"
-		return 1
+# load common functions
+. ./lib.sh
+
+fListToTest="$tdir/listTotest.txt"
+ftested="$tdir/tested.txt"
+
+function notTestedYet(){
+	local filename=$1
+	local existsInFile
+	existsInFile=`grep "$filename" $tested | wc -l`
+
+	if [ $existsInFile -eq 1 ]
+	then
+		log "Tested $file"
+		return false
 	fi
 
-} 
+	log "Not Tested yet $file"
+	return true
 
-function semicolonsToComma (){
-	local originalK=$1
-	
-	newK=`echo "$originalK" | sed 's/;/,/g '`
-	
-	echo "Metadatos preparados nuevos:"
-	echo "$newK"
 }
 
-function getKeywords (){
+function markAsTested(){
 	local filename=$1
-	s1=`exiftool -keywords $filename`
-	originalK=`echo $s1 | cut -d ":" -f2`
 
-	
-	echo "Metadatos originales "
-	echo "$originalK"	
-	
+	log "markAsTested $filename"
+	echo "$filename" >> $ftested
 }
 
-function rewriteKeywords(){
+
+function rewriteNormalizedExifTags(){
 	local filename=$1	
-	local originalK=$2
-	local newK=$3
-	local tmp="tmp.txt"
-	local tmp2="tmp2.txt"
 	
+
 	
-	ret=`exiftool -a -keywords= $filename`
-	echo "Delete old metadata: $ret"
-	
-	rm -f $tmp $tmp2
-	echo $newK | cut -d"," --output-delimiter=$'\r\n' -f1- >> $tmp
-	# Eliminar espacios de principio de línea
-	cat $tmp | awk '{$1=$1};1' > $tmp2
-	# Ordenar líneas y quitar duplicados:
-	sort -u $tmp2 > $tmp
+	normalizeExifTags $filename #return value $ret_normalizeExifTagsFile file
+	# remove original metadata:
+	log "Delete old metadata in $filename"
+	exiftool -a -keywords= $filename
 
 	# Escribir etiquetas:
-	cat $tmp | while read LINE
+	cat $ret_normalizeExifTagsFile | while read LINE
 	do
-		ret=`exiftool -a -keywords+="$LINE" $filename`
-		echo "Write new metadata: $LINE"
+		exiftool -a -keywords+="$LINE" "$filename"
+		log "Wrote new metadata: $LINE"
+		
 	done
 
-
-	# rm -f $tmp $tmp2
-	echo "Write new metadata: $ret"
 	}
 
 
 
+ret_filesToTest="$tdir/filesToTest.txt"
+function filesToTest (){
+	local dirname=$1
+	local allFiles="$tdir/allphotos.txt"
+
+	touch $allFiles # Initialize
+
+	find $dirname -type f | grep -i "\.jpg$" >> $allFiles
+	find $dirname -type f | grep -i "\.jpeg$" >> $allFiles
+
+	if [ -f $ftested ]; then
+		# diferencia entre los que ya están revisados:
+		comm -3 $allFiles $ftested >> $ret_filesToTest
+	else # primera ejecución: se leen todas.
+		cp $allFiles $ret_filesToTest
+	fi
+
+}
+
+function testPhoto (){
+	local filename=$1
+
+	log ">>>> photo begin $filename" 
+
+   		getKeywords "$filename"		# Tags may have spaces. needs " around argument.
+		if containsSemicolons "$ret_getKeywords"; then
+			rewriteNormalizedExifTags "$filename"
+			# Saves list name:
+			echo "$filename" >> $fileSemiColonsList
+		fi
+    	markAsTested "$filename"
+		log "<<<< photo end $filename" 
+}
+
+
+fileSemiColonsList="$today.semicolons.txt"
+touch $fileSemiColonsList
 function allphotos (){
 	local dirname=$1
 	
-	echo "Start scan $dirname"
+	log "Start scan $dirname"
+	filesToTest "$dirname" #Diferencia entre los que existen y los que no.
 
-	flist=`find $dirname -type f -name "*.jpg"`
-	for filename in $flist;
-	do
-		if test -f "$filename"; then
-			echo "photo begin $filename"	
-			getKeywords "$filename"
-			# Tags may have spaces. needs " around argument.
-			if containsSemicolons "$originalK"; then
-				semicolonsToComma "$originalK"
-				rewriteKeywords "$filename" "$originalK" "$newK"
-			fi
-			echo "photo end $filename" 
-			echo "                       -*- "
-			echo ""
-		fi
-	done
+	while read -r filename; do
+		testPhoto $filename
+		
+	done <$ret_filesToTest
+
 	
-	echo "end $dirname"
+	log "end $dirname"
 }
 
 
