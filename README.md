@@ -3,6 +3,8 @@ script to remove exif keywords tags that are separated by semicolon instead of c
 
 # Requirements
 exiftool installed
+comm
+awk
 
 # Use
 ./semicolonKiller.sh  folder
