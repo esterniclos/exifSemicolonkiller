@@ -4,8 +4,9 @@
 # load common functions
 . ./lib.sh
 
-fListToTest="$tdir/listTotest.txt"
+#fListToTest="$tdir/completeFileList.txt"
 ftested="$tdir/tested.txt"
+[[ -d $ftested ]] || touch $ftested
 
 function notTestedYet(){
 	local filename=$1
@@ -51,9 +52,17 @@ function rewriteNormalizedExifTags(){
 
 	}
 
+function sortLinesInFile {
+	# Ordena todos los campos.
+	local f1=$1 
+	f2="$tdir/$today.sort.txt"
+	cp $f1 $f2
+	cat $f2 | sort > $f1
+	rm -f $f2
+}
 
 
-ret_filesToTest="$tdir/filesToTest.txt"
+ret_filesToTest="$tdir/$today.filesToTest.txt"
 function filesToTest (){
 	local dirname=$1
 	local allFiles="$tdir/allphotos.txt"
@@ -62,6 +71,9 @@ function filesToTest (){
 
 	find $dirname -type f | grep -i "\.jpg$" >> $allFiles
 	find $dirname -type f | grep -i "\.jpeg$" >> $allFiles
+
+	sortLinesInFile $allFiles
+	sortLinesInFile $ftested 
 
 	if [ -f $ftested ]; then
 		# diferencia entre los que ya están revisados:
@@ -88,7 +100,7 @@ function testPhoto (){
 }
 
 
-fileSemiColonsList="$today.semicolons.txt"
+fileSemiColonsList="$tdir/$today.semicolons.txt"
 touch $fileSemiColonsList
 function allphotos (){
 	local dirname=$1
@@ -98,7 +110,6 @@ function allphotos (){
 
 	while read -r filename; do
 		testPhoto $filename
-		
 	done <$ret_filesToTest
 
 	

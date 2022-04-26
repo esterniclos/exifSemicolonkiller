@@ -8,7 +8,7 @@ today=$(date +%Y%m%d)
 tdir="tempdir"
 
 # Create a tempdirectory to save files
-mkdir $tdir
+[[ -d $tdir ]] || mkdir $tdir
 
 
 function containsSemicolons (){
