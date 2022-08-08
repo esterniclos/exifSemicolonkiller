@@ -13,13 +13,13 @@ function notTestedYet(){
 	local existsInFile
 	existsInFile=`grep "$filename" $tested | wc -l`
 
-	if [ $existsInFile -eq 1 ]
+	if [ $existsInFile -gt 1 ]
 	then
-		log "Tested $file"
+		log "notTestedYet already Tested $file"
 		return false
 	fi
 
-	log "Not Tested yet $file"
+	log "notTestedYet  $file"
 	return true
 
 }
@@ -46,7 +46,7 @@ function rewriteNormalizedExifTags(){
 	cat $ret_normalizeExifTagsFile | while read LINE
 	do
 		exiftool -a -keywords+="$LINE" "$filename"
-		log "Wrote new metadata: $LINE"
+		log "rewriteNormalizedExifTags Wrote new metadata: $LINE"
 		
 	done
 
@@ -57,7 +57,7 @@ function sortLinesInFile {
 	local f1=$1 
 	f2="$tdir/$today.sort.txt"
 	cp $f1 $f2
-	cat $f2 | sort > $f1
+	cat $f2 | uniq | sort  > $f1
 	rm -f $f2
 }
 
@@ -65,9 +65,9 @@ function sortLinesInFile {
 ret_filesToTest="$tdir/$today.filesToTest.txt"
 function filesToTest (){
 	local dirname=$1
-	local allFiles="$tdir/allphotos.txt"
+	local allFiles="$tdir/$today.allphotos.txt"
 
-	touch $allFiles # Initialize
+	rm -f $allFiles $ret_filesToTest # Initialize 
 
 	find $dirname -type f | grep -i "\.jpg$" >> $allFiles
 	find $dirname -type f | grep -i "\.jpeg$" >> $allFiles
@@ -77,7 +77,7 @@ function filesToTest (){
 
 	if [ -f $ftested ]; then
 		# diferencia entre los que ya están revisados:
-		comm -3 $allFiles $ftested >> $ret_filesToTest
+		comm -23 $allFiles $ftested >> $ret_filesToTest
 	else # primera ejecución: se leen todas.
 		cp $allFiles $ret_filesToTest
 	fi
@@ -87,7 +87,13 @@ function filesToTest (){
 function testPhoto (){
 	local filename=$1
 
-	log ">>>> photo begin $filename" 
+	log "testPhoto >>>> Photo begin $filename" 
+
+
+	if ! test  -f "$filename"; then
+		log "$0 file doesn't exist $filename"
+		return
+	fi
 
    		getKeywords "$filename"		# Tags may have spaces. needs " around argument.
 		if containsSemicolons "$ret_getKeywords"; then
@@ -96,7 +102,7 @@ function testPhoto (){
 			echo "$filename" >> $fileSemiColonsList
 		fi
     	markAsTested "$filename"
-		log "<<<< photo end $filename" 
+		log "testPhoto <<<< photo end $filename" 
 }
 
 
@@ -105,15 +111,15 @@ touch $fileSemiColonsList
 function allphotos (){
 	local dirname=$1
 	
-	log "Start scan $dirname"
-	filesToTest "$dirname" #Diferencia entre los que existen y los que no.
+	log "[fileSemiColonsList] << Start scan $dirname"
+	filesToTest "$dirname" #Diferencia entre los que están ya tested y los que no.
 
 	while read -r filename; do
-		testPhoto $filename
+		testPhoto "$filename"
 	done <$ret_filesToTest
 
 	
-	log "end $dirname"
+	log "[fileSemiColonsList] >> end $dirname"
 }
 
 
