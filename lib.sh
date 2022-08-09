@@ -11,15 +11,17 @@ tdir="tempdir"
 [[ -d $tdir ]] || mkdir $tdir
 
 
+ret_containsSemicolons=0
 function containsSemicolons (){
 	local s1=$1
 	
+	ret_containsSemicolons=0
 	if [[ $s1 == *\;* ]]; then	
-		return 0 #True value
+		ret_containsSemicolons=1 #True value
 	else
-		log "containsSemicolons No semicolon in tags: $s1"
-		return -1 # False value
+		log "[containsSemicolons] No semicolon in tags: $s1"
 	fi
+	return $ret_containsSemicolons
 
 } 
 
@@ -30,7 +32,7 @@ function semicolonsToComma (){
 	
 	ret_semicolonsToComma=`echo "$originalK" | sed 's/;/,/g'`
 	
-	log "semicolonsToComma Exif tags without semicolon :"
+	log "[semicolonsToComma] Exif tags without semicolon :"
 	log "$ret_semicolonsToComma"
 }
 
@@ -41,7 +43,7 @@ function normalizeExifTags (){
 	local tmp="$tdir/normalize.tmp.txt"
 	
 	if ! test  -f "$filename"; then
-		log "normalizeExifTags file doesn't exist $filename"
+		log "[normalizeExifTags] file doesn't exist $filename"
 		return
 	fi
 
@@ -61,7 +63,7 @@ function tagMatch (){
 	local tag=$2
 
 	if ! test  -f "$filename"; then
-		log "tagMatch file doesn't exist $filename"
+		log "[tagMatch] file doesn't exist $filename"
 		return
 	fi
 
@@ -75,17 +77,17 @@ function getKeywords (){
 	local filename=$1
 
 	if ! test  -f "$filename"; then
-		log "getKeywords file not exists $filename"
+		log "[getKeywords] file not exists $filename"
 		return
 	fi
 
 	s1=`exiftool -keywords "$filename"`
-	log "getKeywords exiftool $filename"
+	log "[getKeywords] exiftool $filename"
 	ret_getKeywords=`echo $s1 | cut -d ":" -f2`
 	echo "$ret_getKeywords" > $ret_getKeywordsFile
 
 	
-	log "getKeywords Original Metadata: "
+	log "[getKeywords] Original Metadata: "
 	log "$ret_getKeywords"	
 }
 

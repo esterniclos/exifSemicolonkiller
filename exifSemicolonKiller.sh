@@ -68,6 +68,8 @@ function filesToTest (){
 	local allFiles="$tdir/$today.allphotos.txt"
 
 	rm -f $allFiles $ret_filesToTest # Initialize 
+	log "[filesToTest] scan dir start"
+
 
 	find $dirname -type f | grep -i "\.jpg$" >> $allFiles
 	find $dirname -type f | grep -i "\.jpeg$" >> $allFiles
@@ -82,27 +84,30 @@ function filesToTest (){
 		cp $allFiles $ret_filesToTest
 	fi
 
+	log "[filesToTest] scan dir end"	
 }
 
 function testPhoto (){
 	local filename=$1
 
-	log "testPhoto >>>> Photo begin $filename" 
 
 
 	if ! test  -f "$filename"; then
-		log "$0 file doesn't exist $filename"
+		log "[testPhoto] file doesn't exist $filename"
 		return
 	fi
 
-   		getKeywords "$filename"		# Tags may have spaces. needs " around argument.
-		if containsSemicolons "$ret_getKeywords"; then
+	log "[testPhoto] >>>> Photo begin $filename" 
+
+  		getKeywords "$filename"		# Tags may have spaces. needs " around argument.
+  		containsSemicolons "$ret_getKeywords" # check if there are semicolons
+		if [ $ret_containsSemicolons -ne 0 ]; then
 			rewriteNormalizedExifTags "$filename"
 			# Saves list name:
 			echo "$filename" >> $fileSemiColonsList
 		fi
     	markAsTested "$filename"
-		log "testPhoto <<<< photo end $filename" 
+		log "[testPhoto] <<<< photo end $filename" 
 }
 
 
@@ -110,12 +115,21 @@ fileSemiColonsList="$tdir/$today.semicolons.txt"
 touch $fileSemiColonsList
 function allphotos (){
 	local dirname=$1
+	local total=0
+	local ntested=0
 	
 	log "[fileSemiColonsList] << Start scan $dirname"
 	filesToTest "$dirname" #Diferencia entre los que están ya tested y los que no.
+	total=`cat $ret_filesToTest | wc -l `
 
 	while read -r filename; do
 		testPhoto "$filename"
+		let "ntested++"
+		log "[fileSemiColonsList] progress $ntested / $total "
+
+		# Probamos en una versión 10 fotos sólo.
+		# if [ $ntested -gt 10 ] ; then exit ; fi
+
 	done <$ret_filesToTest
 
 	
@@ -123,4 +137,4 @@ function allphotos (){
 }
 
 
-allphotos $1
+allphotos "$1"
